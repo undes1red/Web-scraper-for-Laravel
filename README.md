@@ -56,6 +56,35 @@ $title = WebScraper::api()
     ->first();
 ```
 
+## Secure browser sessions
+
+Ordinary API calls retain the legacy GET request. Calls carrying cookies,
+credentials, or other sensitive browser state use POST with a JSON body, never
+putting that state in the URL. Use a Guzzle cookie jar for a managed browser
+session; the returned browser snapshot replaces the jar:
+
+```php
+use GuzzleHttp\Cookie\CookieJar;
+use Jez500\WebScraperForLaravel\Facades\WebScraper;
+
+$jar = new CookieJar;
+$scraper = WebScraper::api()
+    ->setCookieJar($jar)
+    ->setScraperApiToken('redacted-token')
+    ->from('https://example.com/account')
+    ->get();
+```
+
+For legacy callers, raw cookies remain supported and are converted to
+host-only cookies for the target URL:
+
+```php
+$scraper = WebScraper::api()
+    ->setCookies('session=redacted-value')
+    ->from('https://example.com/account')
+    ->get();
+```
+
 ## Installation
 
 ```shell

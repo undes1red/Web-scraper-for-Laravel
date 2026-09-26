@@ -2,41 +2,40 @@
 
 namespace Jez500\WebScraperForLaravel;
 
-use Exception;
 use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
+use Throwable;
 
 class WebScraperHttp extends AbstractWebScraper
 {
     public function getRequest(): PendingRequest
     {
-        return Http::withHeaders($this->buildHeaders())->timeout($this->scraperRequestTimeout);
+        return parent::getRequest()->withHeaders($this->buildHeaders());
     }
 
     public function get(): self
     {
-        $request = function () {
+        $this->body = $this->fetchWithCache(function (): ?string {
             try {
-                return $this->getRequest()->get($this->url)->body();
-            } catch (Exception $e) {
+                $response = $this->getRequest()->get($this->url);
+                if (! $response->successful()) {
+                    $this->errors[] = [
+                        'message' => 'Web request failed',
+                        'code' => $response->status(),
+                    ];
+
+                    return null;
+                }
+
+                return $response->body();
+            } catch (Throwable $e) {
                 $this->errors[] = [
-                    'message' => $e->getMessage(),
+                    'message' => 'Web request failed',
                     'code' => $e->getCode(),
                 ];
-                logger()->error($e->getMessage());
             }
 
-            return '';
-        };
-
-        $this->body = $this->useCache === true
-            ? Cache::remember(
-                $this->getCacheKey($this->url),
-                now()->addMinutes($this->cacheMinsTtl),
-                fn () => $request()
-            )
-            : $request();
+            return null;
+        });
 
         return $this;
     }

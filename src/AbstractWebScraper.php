@@ -4,9 +4,11 @@ namespace Jez500\WebScraperForLaravel;
 
 use Closure;
 use Exception;
+use GuzzleHttp\Cookie\CookieJarInterface;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Jez500\WebScraperForLaravel\Exceptions\DomSelectorException;
 use Symfony\Component\DomCrawler\Crawler;
@@ -33,6 +35,12 @@ abstract class AbstractWebScraper implements WebScraperInterface
 
     protected string $cookies = '';
 
+    protected ?CookieJarInterface $cookieJar = null;
+
+    protected bool $cookieJarConfigured = false;
+
+    protected ?string $scraperApiToken = null;
+
     protected array $errors = [];
 
     public function __construct()
@@ -42,11 +50,10 @@ abstract class AbstractWebScraper implements WebScraperInterface
 
     public function from(string $url): self
     {
-        /** @var WebScraperHttp $self */
-        $self = resolve(static::class);
-        $self->setUrl($url);
+        $this->body = '';
+        $this->errors = [];
 
-        return $self;
+        return $this->setUrl($url);
     }
 
     public function buildHeaders(): array
@@ -58,7 +65,7 @@ abstract class AbstractWebScraper implements WebScraperInterface
             'Accept-Encoding' => 'gzip, deflate, br',
         ];
 
-        if ($this->cookies) {
+        if ($this->cookies && ! $this->cookieJarConfigured) {
             $headers['Cookie'] = $this->cookies;
         }
 
@@ -94,6 +101,31 @@ abstract class AbstractWebScraper implements WebScraperInterface
         $this->cookies = $cookies;
 
         return $this;
+    }
+
+    public function setCookieJar(?CookieJarInterface $cookieJar): self
+    {
+        $this->cookieJar = $cookieJar;
+        $this->cookieJarConfigured = $cookieJar !== null;
+
+        return $this;
+    }
+
+    public function getCookieJar(): ?CookieJarInterface
+    {
+        return $this->cookieJar;
+    }
+
+    public function setScraperApiToken(?string $token): self
+    {
+        $this->scraperApiToken = $token;
+
+        return $this;
+    }
+
+    public function getScraperApiToken(): ?string
+    {
+        return $this->scraperApiToken;
     }
 
     public function setUseCache(bool $useCache): self
@@ -158,8 +190,49 @@ abstract class AbstractWebScraper implements WebScraperInterface
 
     public function getRequest(): PendingRequest
     {
-        return Http::connectTimeout($this->getConnectTimeout())
+        $request = Http::connectTimeout($this->getConnectTimeout())
             ->timeout($this->getRequestTimeout());
+
+        return $this->cookieJarConfigured
+            ? $request->withOptions(['cookies' => $this->cookieJar])
+            : $request;
+    }
+
+    public function shouldUseCache(): bool
+    {
+        return $this->useCache
+            && ! $this->cookieJarConfigured
+            && $this->cookies === ''
+            && $this->options === []
+            && $this->scraperApiToken === null
+            && ! $this->hasMutableRequestContext()
+            && $this->scraperRequestTimeout === 30
+            && $this->scraperConnectTimeout === 30;
+    }
+
+    protected function hasMutableRequestContext(): bool
+    {
+        return false;
+    }
+
+    /** @param callable(): (?string) $request */
+    protected function fetchWithCache(callable $request): string
+    {
+        if (! $this->shouldUseCache()) {
+            return $request() ?? '';
+        }
+
+        $key = $this->getCacheKey($this->url);
+        if (Cache::has($key)) {
+            return (string) Cache::get($key);
+        }
+
+        $body = $request();
+        if ($body !== null) {
+            Cache::put($key, $body, now()->addMinutes($this->cacheMinsTtl));
+        }
+
+        return $body ?? '';
     }
 
     abstract public function get(): self;

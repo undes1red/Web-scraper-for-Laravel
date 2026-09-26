@@ -3,6 +3,7 @@
 namespace Jez500\WebScraperForLaravel;
 
 use Closure;
+use GuzzleHttp\Cookie\CookieJarInterface;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Collection;
 use Symfony\Component\DomCrawler\Crawler;
@@ -60,4 +61,14 @@ interface WebScraperInterface
     public function setBody(string $body): self;
 
     public function setCookies(string $cookies): self;
+
+    public function setCookieJar(?CookieJarInterface $cookieJar): self;
+
+    public function getCookieJar(): ?CookieJarInterface;
+
+    public function setScraperApiToken(?string $token): self;
+
+    public function getScraperApiToken(): ?string;
+
+    public function shouldUseCache(): bool;
 }

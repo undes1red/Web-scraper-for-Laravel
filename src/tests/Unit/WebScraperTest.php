@@ -2,6 +2,7 @@
 
 namespace Jez500\WebScraperForLaravel\tests\Unit;
 
+use GuzzleHttp\Cookie\CookieJar;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -9,6 +10,7 @@ use Illuminate\Support\Facades\Http;
 use Jez500\WebScraperForLaravel\Enums\ScraperServicesEnum;
 use Jez500\WebScraperForLaravel\Exceptions\DomSelectorException; // Added
 use Jez500\WebScraperForLaravel\Facades\WebScraper;
+use Jez500\WebScraperForLaravel\WebScraperFake;
 use Jez500\WebScraperForLaravel\WebScraperHttp;
 use Jez500\WebScraperForLaravel\WebScraperInterface;
 use Jez500\WebScraperForLaravel\WebScraperServiceProvider;
@@ -44,6 +46,14 @@ class WebScraperTest extends TestCase
         Cache::flush();
 
         $this->setupMocks();
+    }
+
+    public function test_fake_preserves_seeded_response_across_from_calls(): void
+    {
+        $fake = (new WebScraperFake)->setBody('<h1>fixture</h1>');
+
+        $this->assertSame('<h1>fixture</h1>', $fake->from('https://example.com/first')->get()->getBody());
+        $this->assertSame('<h1>fixture</h1>', $fake->from('https://example.com/second')->get()->getBody());
     }
 
     public function test_can_set_url()
@@ -192,6 +202,20 @@ class WebScraperTest extends TestCase
 
         $this->assertSame(11, $scraper->getConnectTimeout());
         $this->assertSame(12, $scraper->getRequestTimeout());
+    }
+
+    public function test_direct_http_request_uses_cookie_jar_and_both_timeouts(): void
+    {
+        $jar = new CookieJar;
+        $request = (new WebScraperHttp)
+            ->setCookieJar($jar)
+            ->setConnectTimeout(11)
+            ->setRequestTimeout(12)
+            ->getRequest();
+
+        $this->assertSame($jar, $request->getOptions()['cookies']);
+        $this->assertSame(11, $request->getOptions()['connect_timeout']);
+        $this->assertSame(12, $request->getOptions()['timeout']);
     }
 
     protected function getScraper(): WebScraperInterface
