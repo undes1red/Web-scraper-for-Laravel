@@ -23,6 +23,13 @@ class WebScraperApi extends AbstractWebScraper
         'cache' => false, // We cache in this app.
     ];
 
+    public function __construct(?WebScraperDriverInterface $driver = null)
+    {
+        parent::__construct();
+
+        $this->setDriver($driver ?? resolve(ApiDriver::class));
+    }
+
     public function setScraperApiBaseUrl(string $scraperApiBaseUrl): self
     {
         static::$scraperApiUrl = trim($scraperApiBaseUrl, '/').'/api/article';

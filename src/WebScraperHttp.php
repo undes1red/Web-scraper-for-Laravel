@@ -7,12 +7,12 @@ use Throwable;
 
 class WebScraperHttp extends AbstractWebScraper
 {
-    public function getRequest(): PendingRequest
+    public function __construct(?WebScraperDriverInterface $driver = null)
     {
         return parent::getRequest()->withHeaders($this->buildHeaders());
     }
 
-    public function get(): self
+    public function getRequest(): PendingRequest
     {
         $this->body = $this->fetchWithCache(function (): ?string {
             try {

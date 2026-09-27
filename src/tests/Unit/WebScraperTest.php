@@ -7,8 +7,10 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Jez500\WebScraperForLaravel\AbstractWebScraper;
+use Jez500\WebScraperForLaravel\Drivers\WebScraperDriverInterface;
 use Jez500\WebScraperForLaravel\Enums\ScraperServicesEnum;
-use Jez500\WebScraperForLaravel\Exceptions\DomSelectorException; // Added
+use Jez500\WebScraperForLaravel\Exceptions\DomSelectorException;
 use Jez500\WebScraperForLaravel\Facades\WebScraper;
 use Jez500\WebScraperForLaravel\WebScraperFake;
 use Jez500\WebScraperForLaravel\WebScraperHttp;
