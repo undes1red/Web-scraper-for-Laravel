@@ -40,6 +40,18 @@ class WebScraperApiTest extends WebScraperTest
         $this->assertSame('test', $scraper->from('http://foo.bar')->get()->getBody());
     }
 
+    public function test_wait_until_defaults_to_domcontentloaded_and_can_be_overridden(): void
+    {
+        $scraper = new WebScraperApi;
+        $defaultWaitUntil = $scraper->getRequestParams()['wait-until'];
+        $scraper->setOptions(['wait-until' => 'networkidle']);
+
+        $this->assertSame(
+            ['domcontentloaded', 'networkidle'],
+            [$defaultWaitUntil, $scraper->getRequestParams()['wait-until']],
+        );
+    }
+
     public function test_can_set_cookies()
     {
         $scraper = new WebScraperApi;

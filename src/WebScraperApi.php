@@ -18,7 +18,7 @@ class WebScraperApi extends AbstractWebScraper
         'sleep' => 2000,
         'full-content' => true,
         'device' => 'Desktop Chrome',
-        'wait-until' => 'networkidle',
+        'wait-until' => 'domcontentloaded',
         'timeout' => 30000,
         'cache' => false, // We cache in this app.
     ];
